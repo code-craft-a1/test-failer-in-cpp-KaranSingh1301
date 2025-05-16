@@ -13,12 +13,8 @@ namespace WeatherSpace
             virtual int Humidity() const = 0;
             virtual int WindSpeedKMPH() const = 0;
     };
-    /// <summary>
-    /// This is a stub for a weather sensor. For the sake of testing 
-    /// we create a stub that generates weather data and allows us to
-    /// test the other parts of this application in isolation
-    /// without needing the actual Sensor during development
-    /// </summary>
+
+    // Existing stub
     class SensorStub : public IWeatherSensor {
         int Humidity() const override {
             return 72;
@@ -36,10 +32,29 @@ namespace WeatherSpace
             return 52;
         }
     };
+
+    // New stub added to expose the bug (high precip + high wind)
+    class StormyStub : public IWeatherSensor {
+        int Humidity() const override {
+            return 90;
+        }
+
+        int Precipitation() const override {
+            return 80; // high precipitation
+        }
+
+        double TemperatureInC() const override {
+            return 30; // hot enough
+        }
+
+        int WindSpeedKMPH() const override {
+            return 90; // stormy wind
+        }
+    };
+
     string Report(const IWeatherSensor& sensor)
     {
         int precipitation = sensor.Precipitation();
-        // precipitation < 20 is a sunny day
         string report = "Sunny Day";
 
         if (sensor.TemperatureInC() > 25)
@@ -51,7 +66,6 @@ namespace WeatherSpace
         }
         return report;
     }
-    
     void TestRainy()
     {
         SensorStub sensor;
@@ -62,14 +76,19 @@ namespace WeatherSpace
 
     void TestHighPrecipitation()
     {
-        // This instance of stub needs to be different-
-        // to give high precipitation (>60) and low wind-speed (<50)
         SensorStub sensor;
-
-        // strengthen the assert to expose the bug
-        // (function returns Sunny day, it should predict rain)
         string report = Report(sensor);
-        assert(report.length() > 0);
+        assert(report.length() > 0); // weak test
+    }
+
+    // New test to expose bug
+    void TestStormCondition()
+    {
+        StormyStub sensor;
+        string report = Report(sensor);
+        cout << report << endl;
+        // This should fail because bug prevents correct storm report
+        assert(report.find("Stormy") != string::npos);
     }
 }
 
@@ -77,5 +96,6 @@ void testWeatherReport() {
     cout << "\nWeather report test\n";
     WeatherSpace::TestRainy();
     WeatherSpace::TestHighPrecipitation();
+    WeatherSpace::TestStormCondition(); // Run the new test
     cout << "All is well (maybe)\n";
 }
